@@ -10,6 +10,11 @@
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/mandelbrot.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/poincare.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/p-vs-np.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/banach-tarski.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/fourier-transform.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/cantor-infinity.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/mobius-klein.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/public/assets/navier-stokes.png`
 - Final home implementation: `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/home-desktop-final.png`
 - Expanded home implementation: `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/home-all-theories-final.png`
 - Final explorer implementation: `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/explorer-desktop-final.png`
@@ -20,10 +25,17 @@
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/poincare-explorer-final.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/pnp-explorer-final.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/theory-explorers-contact-sheet.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/banach-explorer-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/fourier-explorer-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/cantor-explorer-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/mobius-explorer-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/navier-explorer-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/new-theories-contact-sheet.png`
 - Mobile evidence:
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/home-mobile-final.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/explorer-mobile-final.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/pnp-mobile-final.png`
+  - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/navier-mobile-final.png`
 - Side-by-side evidence:
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/compare-reference-home-final.png`
   - `/Users/zhangxian/Documents/格调高的设计风格001/lijing-mvp/qa/compare-reference-explorer-final.png`
@@ -59,8 +71,9 @@ The Kakeya visual center was inspected in both combined comparison images. The i
 - Paused the rotation and verified the control changed to “继续旋转”.
 - Opened and closed the research-plate modal.
 - Used the star-map anchor and returned to the entrance.
-- Entered all six atlas cards and verified each opens the correct chapter title, five-step structure where applicable, formula, manuscript image, and chapter-specific control.
+- Entered all eleven atlas cards and verified every chapter opens the correct title, step structure, formula, manuscript image, and chapter-specific control.
 - Changed Riemann virtual height, Gödel self-reference depth, Mandelbrot iteration depth, Poincaré flow time, and P versus NP problem size; each output and scene updated.
+- Changed Banach–Tarski reassembly progress, Fourier harmonic count, Cantor removal depth, Möbius surface journey, and Navier–Stokes Reynolds number; each output and Three.js field updated.
 - Verified the P versus NP chapter at `390 × 844`: all five step tabs remain on one row, canvas stays readable, and horizontal overflow remains zero.
 - Verified desktop and mobile layouts with no horizontal overflow.
 - Checked browser console: no application errors. A Three.js dependency deprecation warning for `THREE.Clock` remains non-blocking.
@@ -97,6 +110,18 @@ The Kakeya visual center was inspected in both combined comparison images. The i
 - [P2] The mobile rail originally assumed four steps, which would wrap the five-step chapters inconsistently.
   - Fix: switched to an auto-fitting minimum-width grid and simplified the mobile stage heading.
   - Post-fix evidence: `qa/pnp-mobile-final.png`; five step tabs fit in one row with zero horizontal overflow.
+
+### Iteration 4
+
+- [P1] The supplied collection contained five manuscript plates that were not represented in the atlas.
+  - Fix: expanded the content model from six to eleven chapters and added full five-step explanatory journeys for Banach–Tarski, Fourier transform, Cantor infinity, Möbius/Klein topology, and Navier–Stokes.
+  - Post-fix evidence: `qa/home-11-theories-final.png`.
+- [P1] Reusing an existing scene would not communicate the new theories' distinct mechanisms.
+  - Fix: built five independent Three.js fields: non-measurable point-cloud reassembly, harmonic decomposition and spectrum, recursive middle-third removal, Möbius/Klein surfaces, and Reynolds-number-driven streamline complexity.
+  - Post-fix evidence: `qa/new-theories-contact-sheet.png`.
+- [P2] The expanded five-step chapters needed a fresh responsive pass.
+  - Fix: tested Navier–Stokes at `390 × 844`, including all five tabs, canvas, explanation, formula, and high-Re slider state.
+  - Post-fix evidence: `qa/navier-mobile-final.png`; browser console contained no application errors.
 
 ## Findings
 

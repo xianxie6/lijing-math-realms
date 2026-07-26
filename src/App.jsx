@@ -399,13 +399,13 @@ function Home({ onExplore, onOpenPlate }) {
       <section className="atlas" id="atlas" aria-labelledby="atlas-title">
         <div className="section-heading">
           <div>
-            <span className="section-index">FIELD NOTES / 01—06</span>
+            <span className="section-index">FIELD NOTES / 01—11</span>
             <h2 id="atlas-title">数学观念星图</h2>
           </div>
           <p>
             每一个理论，都是一处可以进入的世界。
             <br />
-            六册研究手稿现已开放。
+            十一册研究手稿现已开放。
           </p>
         </div>
 
