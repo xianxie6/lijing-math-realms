@@ -92,17 +92,27 @@ function StarField({ paused, mode }) {
 
   useFrame((state, delta) => {
     if (!paused) {
-      farRef.current.rotation.z += delta * (mode === "drift" ? 0.009 : 0.003);
-      nearRef.current.rotation.z -= delta * (mode === "drift" ? 0.018 : 0.006);
+      farRef.current.rotation.z += delta * (mode === "drift" ? 0.045 : 0.008);
+      nearRef.current.rotation.z -= delta * (mode === "drift" ? 0.09 : 0.018);
     }
     nearRef.current.position.x = THREE.MathUtils.lerp(
       nearRef.current.position.x,
-      state.pointer.x * 0.18,
-      0.025,
+      state.pointer.x * 0.68,
+      0.055,
     );
     nearRef.current.position.y = THREE.MathUtils.lerp(
       nearRef.current.position.y,
-      state.pointer.y * 0.12,
+      state.pointer.y * 0.42,
+      0.055,
+    );
+    farRef.current.position.x = THREE.MathUtils.lerp(
+      farRef.current.position.x,
+      state.pointer.x * -0.22,
+      0.025,
+    );
+    farRef.current.position.y = THREE.MathUtils.lerp(
+      farRef.current.position.y,
+      state.pointer.y * -0.14,
       0.025,
     );
   });
@@ -139,7 +149,7 @@ function StarField({ paused, mode }) {
   );
 }
 
-function NocturnePlanet({ active, pulse, paused }) {
+function NocturnePlanet({ active, pulse, paused, mode }) {
   const group = useRef();
   const planet = useRef();
   const atmosphere = useRef();
@@ -219,13 +229,16 @@ function NocturnePlanet({ active, pulse, paused }) {
   useFrame((_, delta) => {
     const speed = paused ? 0 : delta;
     planetMaterial.uniforms.uTime.value += speed;
-    if (!paused) planet.current.rotation.y += delta * 0.018;
+    if (!paused) {
+      const rotationSpeed = mode === "drift" ? 0.34 : mode === "trace" ? 0.09 : 0.055;
+      planet.current.rotation.y += delta * rotationSpeed;
+    }
     const selected = OBSERVATIONS.find((item) => item.id === active);
-    const targetX = selected ? -selected.position[1] * 0.045 : pointer.y * 0.08;
-    const targetY = selected ? selected.position[0] * 0.035 : pointer.x * 0.11;
-    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, targetX, 0.035);
-    group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, targetY, 0.035);
-    atmosphere.current.rotation.z -= speed * 0.008;
+    const targetX = selected ? -selected.position[1] * 0.09 : pointer.y * 0.28;
+    const targetY = selected ? selected.position[0] * 0.075 : pointer.x * 0.36;
+    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, targetX, 0.075);
+    group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, targetY, 0.075);
+    atmosphere.current.rotation.z -= speed * (mode === "drift" ? 0.15 : 0.045);
     if (pulseRing.current) {
       const age = Math.min((performance.now() - pulse) / 1700, 1);
       pulseRing.current.scale.setScalar(1 + age * 2.1);
@@ -285,7 +298,7 @@ function OrbitParticle({ curve, speed, offset, paused, color, emphasized }) {
   );
 }
 
-function OrbitNetwork({ active, mode, paused }) {
+function OrbitNetwork({ active, mode, paused, pulse }) {
   const group = useRef();
   const flare = useRef();
   const orbitData = useMemo(() => {
@@ -319,8 +332,18 @@ function OrbitNetwork({ active, mode, paused }) {
   }, []);
 
   useFrame((state, delta) => {
-    if (!paused) group.current.rotation.z += delta * (mode === "drift" ? 0.01 : 0.002);
-    flare.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 3.2) * 0.14);
+    if (!paused) {
+      group.current.rotation.z += delta * (mode === "drift" ? 0.12 : 0.015);
+      group.current.rotation.y += delta * (mode === "trace" ? 0.035 : 0.006);
+    }
+    const age = Math.min(Math.max((performance.now() - pulse) / 1250, 0), 1);
+    const blast = pulse > 0 && age < 1 ? Math.sin(age * Math.PI) : 0;
+    flare.current.scale.setScalar(
+      1 + Math.sin(state.clock.elapsedTime * 3.2) * 0.14 + blast * 2.4,
+    );
+    group.current.scale.setScalar(
+      THREE.MathUtils.lerp(group.current.scale.x, 1 + blast * 0.18, 0.12),
+    );
   });
 
   return (
@@ -434,17 +457,70 @@ function SceneNode({ observation, active, setActive }) {
   );
 }
 
-function CameraRig({ active, mode }) {
+function WorldRig({ children, drag, mode, pulse }) {
+  const group = useRef();
+  const { pointer } = useThree();
+  useFrame(() => {
+    const age = Math.min(Math.max((performance.now() - pulse) / 1150, 0), 1);
+    const blast = pulse > 0 && age < 1 ? Math.sin(age * Math.PI) : 0;
+    const targetScale = (mode === "trace" ? 1.1 : mode === "drift" ? 0.96 : 1) + blast * 0.12;
+    group.current.rotation.x = THREE.MathUtils.lerp(
+      group.current.rotation.x,
+      -drag.y * 0.85 + pointer.y * 0.18,
+      0.09,
+    );
+    group.current.rotation.y = THREE.MathUtils.lerp(
+      group.current.rotation.y,
+      drag.x * 1.15 + pointer.x * 0.28,
+      0.09,
+    );
+    group.current.position.x = THREE.MathUtils.lerp(
+      group.current.position.x,
+      pointer.x * 0.32 + drag.x * 0.18,
+      0.06,
+    );
+    group.current.position.y = THREE.MathUtils.lerp(
+      group.current.position.y,
+      pointer.y * 0.2 - drag.y * 0.12,
+      0.06,
+    );
+    group.current.scale.setScalar(
+      THREE.MathUtils.lerp(group.current.scale.x, targetScale, 0.09),
+    );
+  });
+  return <group ref={group}>{children}</group>;
+}
+
+function CameraRig({ active, mode, drag, depth, pulse }) {
   const { camera, pointer } = useThree();
   useFrame(() => {
     const observation = OBSERVATIONS.find((item) => item.id === active);
-    const modeDepth = mode === "drift" ? 0.55 : mode === "trace" ? -0.25 : 0;
-    const targetX = observation ? observation.position[0] * 0.07 : pointer.x * 0.22;
-    const targetY = observation ? observation.position[1] * 0.06 : pointer.y * 0.16;
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.022);
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.022);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, 7.8 + modeDepth, 0.025);
-    camera.lookAt(0, 0, 0);
+    const modeDepth = mode === "drift" ? 0.8 : mode === "trace" ? -0.8 : 0;
+    const age = Math.min(Math.max((performance.now() - pulse) / 1050, 0), 1);
+    const blast = pulse > 0 && age < 1 ? Math.sin(age * Math.PI) : 0;
+    const shake = blast * (1 - age) * 0.16;
+    const targetX = observation
+      ? observation.position[0] * 0.18
+      : pointer.x * 0.78 + drag.x * 0.5;
+    const targetY = observation
+      ? observation.position[1] * 0.15
+      : pointer.y * 0.5 - drag.y * 0.38;
+    camera.position.x = THREE.MathUtils.lerp(
+      camera.position.x,
+      targetX + Math.sin(age * 70) * shake,
+      0.07,
+    );
+    camera.position.y = THREE.MathUtils.lerp(
+      camera.position.y,
+      targetY + Math.cos(age * 61) * shake,
+      0.07,
+    );
+    camera.position.z = THREE.MathUtils.lerp(
+      camera.position.z,
+      7.8 + modeDepth + depth * 2.7 - blast * 1.65,
+      0.085,
+    );
+    camera.lookAt(pointer.x * -0.2, pointer.y * -0.12, 0);
   });
   return null;
 }
@@ -475,7 +551,7 @@ function Horizon() {
   );
 }
 
-function NocturneScene({ active, setActive, paused, mode, pulse }) {
+function NocturneScene({ active, setActive, paused, mode, pulse, drag, depth }) {
   return (
     <Canvas
       dpr={[1, 1.7]}
@@ -486,18 +562,36 @@ function NocturneScene({ active, setActive, paused, mode, pulse }) {
       <color attach="background" args={["#071426"]} />
       <fog attach="fog" args={["#071426", 7, 16]} />
       <Suspense fallback={null}>
-        <CameraRig active={active} mode={mode} />
+        <CameraRig
+          active={active}
+          mode={mode}
+          drag={drag}
+          depth={depth}
+          pulse={pulse}
+        />
         <StarField paused={paused} mode={mode} />
-        <NocturnePlanet active={active} pulse={pulse} paused={paused} />
-        <OrbitNetwork active={active} mode={mode} paused={paused} />
-        {OBSERVATIONS.map((observation) => (
-          <SceneNode
-            key={observation.id}
-            observation={observation}
-            active={active === observation.id}
-            setActive={setActive}
+        <WorldRig drag={drag} mode={mode} pulse={pulse}>
+          <NocturnePlanet
+            active={active}
+            pulse={pulse}
+            paused={paused}
+            mode={mode}
           />
-        ))}
+          <OrbitNetwork
+            active={active}
+            mode={mode}
+            paused={paused}
+            pulse={pulse}
+          />
+          {OBSERVATIONS.map((observation) => (
+            <SceneNode
+              key={observation.id}
+              observation={observation}
+              active={active === observation.id}
+              setActive={setActive}
+            />
+          ))}
+        </WorldRig>
         <Horizon />
       </Suspense>
     </Canvas>
@@ -509,8 +603,12 @@ export function App() {
   const [mode, setMode] = useState("observe");
   const [paused, setPaused] = useState(false);
   const [pulse, setPulse] = useState(0);
+  const [drag, setDrag] = useState({ x: 0, y: 0 });
+  const [depth, setDepth] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const [entered, setEntered] = useState(false);
   const [time, setTime] = useState("00:00:00");
+  const dragOrigin = useRef(null);
   const activeObservation = OBSERVATIONS.find((item) => item.id === active);
 
   useEffect(() => {
@@ -549,15 +647,75 @@ export function App() {
     setActive(null);
   };
 
+  const beginDrag = (event) => {
+    if (event.target.closest?.("button")) return;
+    dragOrigin.current = {
+      x: event.clientX,
+      y: event.clientY,
+      baseX: drag.x,
+      baseY: drag.y,
+      pointerId: event.pointerId,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDragging(true);
+  };
+
+  const moveDrag = (event) => {
+    if (!dragOrigin.current) return;
+    const width = Math.max(window.innerWidth, 1);
+    const height = Math.max(window.innerHeight, 1);
+    setDrag({
+      x: THREE.MathUtils.clamp(
+        dragOrigin.current.baseX +
+          ((event.clientX - dragOrigin.current.x) / width) * 2.8,
+        -1.5,
+        1.5,
+      ),
+      y: THREE.MathUtils.clamp(
+        dragOrigin.current.baseY +
+          ((event.clientY - dragOrigin.current.y) / height) * 2.8,
+        -1.3,
+        1.3,
+      ),
+    });
+  };
+
+  const endDrag = (event) => {
+    if (!dragOrigin.current) return;
+    event.currentTarget.releasePointerCapture?.(
+      dragOrigin.current.pointerId,
+    );
+    dragOrigin.current = null;
+    setDragging(false);
+  };
+
   return (
-    <main className={`observatory ${entered ? "is-entered" : ""}`}>
-      <div className="scene-wrap">
+    <main
+      className={`observatory ${entered ? "is-entered" : ""} ${
+        dragging ? "is-dragging" : ""
+      }`}
+    >
+      <div
+        className="scene-wrap"
+        onPointerDown={beginDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onDoubleClick={triggerPulse}
+        onWheel={(event) =>
+          setDepth((value) =>
+            THREE.MathUtils.clamp(value + event.deltaY * 0.0015, -1, 1),
+          )
+        }
+      >
         <NocturneScene
           active={active}
           setActive={setActive}
           paused={paused}
           mode={mode}
           pulse={pulse}
+          drag={drag}
+          depth={depth}
         />
       </div>
       <div className="paper-grain" aria-hidden="true" />
@@ -628,6 +786,14 @@ export function App() {
         <small>PULSE FIELD</small>
       </button>
 
+      <div className="depth-meter" aria-hidden="true">
+        <span>DEPTH</span>
+        <i>
+          <b style={{ height: `${(1 - (depth + 1) / 2) * 100}%` }} />
+        </i>
+        <small>{depth > 0.35 ? "远域" : depth < -0.35 ? "近核" : "中轨"}</small>
+      </div>
+
       <aside className={`observation-card ${activeObservation ? "is-open" : ""}`}>
         {activeObservation && (
           <>
@@ -654,14 +820,14 @@ export function App() {
         <div className="interaction-hint">
           <span className="pointer-orbit"><i /></span>
           <p>
-            <strong>移动以扰动引力</strong>
-            <small>点击节点展开手稿 · P 暂停 · 1—3 切换模式</small>
+            <strong>按住拖拽天体 · 滚轮穿越深度</strong>
+            <small>双击触发冲击 · P 暂停 · 1—3 切换模式</small>
           </p>
         </div>
         <p className="field-state">
           <span className="live-dot" />
-          FIELD STABLE
-          <b>φ 1.618</b>
+          {dragging ? "FIELD DISTORTED" : "FIELD STABLE"}
+          <b>Z {depth.toFixed(2)}</b>
         </p>
       </footer>
 

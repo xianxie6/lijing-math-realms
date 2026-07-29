@@ -67,6 +67,8 @@ button:focus-visible {
 .scene-wrap {
   z-index: 0;
   opacity: 0;
+  cursor: grab;
+  touch-action: none;
   transform: scale(1.035);
   transition:
     opacity 1.8s ease,
@@ -76,6 +78,19 @@ button:focus-visible {
 .is-entered .scene-wrap {
   opacity: 1;
   transform: scale(1);
+}
+
+.observatory.is-dragging .scene-wrap {
+  cursor: grabbing;
+}
+
+.observatory.is-dragging .hero-copy {
+  opacity: 0.3;
+  transform: translate(-14px, -50%);
+}
+
+.observatory.is-dragging .vignette {
+  opacity: 0.72;
 }
 
 .paper-grain {
@@ -404,6 +419,63 @@ button:focus-visible {
 
 .singularity-control:hover svg {
   animation: target-spin 1.8s linear infinite;
+}
+
+.depth-meter {
+  position: absolute;
+  z-index: 8;
+  left: 66%;
+  bottom: 14%;
+  display: grid;
+  grid-template-columns: auto 5px auto;
+  align-items: end;
+  gap: 9px;
+  color: rgba(231, 221, 199, 0.36);
+  font-family: var(--mono);
+  font-size: 6px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease 1.15s;
+}
+
+.is-entered .depth-meter {
+  opacity: 1;
+}
+
+.depth-meter > i {
+  position: relative;
+  width: 4px;
+  height: 54px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(231, 221, 199, 0.24);
+}
+
+.depth-meter > i::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 1px;
+  background: rgba(231, 221, 199, 0.3);
+}
+
+.depth-meter b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(var(--coral), var(--gold));
+  transition: height 0.12s ease-out;
+}
+
+.depth-meter small {
+  min-width: 24px;
+  color: rgba(231, 221, 199, 0.62);
+  font-size: inherit;
 }
 
 .observation-card {
@@ -792,6 +864,11 @@ button:focus-visible {
   }
   .singularity-control span,
   .singularity-control small { display: none; }
+  .depth-meter {
+    left: auto;
+    right: 61px;
+    bottom: 18%;
+  }
   .observation-card {
     left: 20px;
     right: 20px;
