@@ -82,8 +82,8 @@ button:focus-visible {
   z-index: 2;
   pointer-events: none;
   background-image:
-    url("/assets/indigo-grain.png"),
-    url("/assets/paper-texture-subtle.png");
+    url("../assets/indigo-grain.png"),
+    url("../assets/paper-texture-subtle.png");
   background-size: 512px, 380px;
   background-blend-mode: soft-light, overlay;
   mix-blend-mode: screen;
@@ -418,7 +418,7 @@ button:focus-visible {
   color: #102139;
   background:
     linear-gradient(rgba(231, 221, 199, 0.96), rgba(222, 211, 186, 0.95)),
-    url("/assets/paper-texture-subtle.png");
+    url("../assets/paper-texture-subtle.png");
   box-shadow:
     0 28px 90px rgba(0, 0, 0, 0.42),
     5px 5px 0 rgba(216, 130, 111, 0.34);
