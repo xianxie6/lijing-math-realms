@@ -3,7 +3,6 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { Compass, Crosshair, Pause, Play, X } from "@phosphor-icons/react";
-import "@fontsource-variable/noto-serif-sc";
 import "@fontsource/ibm-plex-mono/400.css";
 import "./styles.css";
 

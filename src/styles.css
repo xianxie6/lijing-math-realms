@@ -1,5 +1,5 @@
 :root {
-  font-family: "Noto Serif SC Variable", "Songti SC", serif;
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
   color: #e7ddc7;
   background: #071426;
   font-synthesis: none;
@@ -577,7 +577,7 @@ button:focus-visible {
 }
 
 .scene-node-label span {
-  font-family: "Noto Serif SC Variable", serif;
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
   font-size: 9px;
   letter-spacing: 0.08em;
 }

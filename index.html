@@ -9,9 +9,33 @@
     />
     <meta name="theme-color" content="#071426" />
     <title>暮蓝星图 · 可触摸的宇宙手稿</title>
+    <style>
+      html, body, #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #071426;
+      }
+      .boot-screen {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        color: rgba(231, 221, 199, 0.72);
+        font-family: "Songti SC", "STSong", serif;
+        letter-spacing: 0.22em;
+        background: radial-gradient(circle, #102743, #071426 58%, #030b17);
+      }
+      .boot-screen span {
+        padding: 18px 24px;
+        border: 1px solid rgba(231, 221, 199, 0.18);
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-screen"><span>暮蓝自然研究所 · 星图载入中</span></div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
