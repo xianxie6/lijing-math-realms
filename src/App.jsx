@@ -1,128 +1,64 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Float, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
-import katex from "katex";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowsOut,
-  BookOpenText,
-  Compass,
-  Pause,
-  Play,
-  X,
-} from "@phosphor-icons/react";
+import { Compass, Crosshair, Pause, Play, X } from "@phosphor-icons/react";
 import "@fontsource-variable/noto-serif-sc";
 import "@fontsource/ibm-plex-mono/400.css";
-import "katex/dist/katex.min.css";
-import { TheoryScene } from "./TheoryScenes";
-import { concepts as theoryConcepts, theories } from "./theoryContent";
+import "./styles.css";
 
-const concepts = [
+const OBSERVATIONS = [
   {
-    id: "kakeya",
-    index: "01",
-    title: "三维 Kakeya 集",
-    subtitle: "在极小空间中容纳所有方向",
-    domain: "几何测度论",
-    image: "/assets/kakeya-study.png",
-    available: true,
+    id: "gravity",
+    index: "A–01",
+    title: "引力的草图",
+    eyebrow: "GRAVITATIONAL STUDY",
+    glyph: "◎",
+    position: [-2.2, 1.02, 1.05],
+    formula: "∇ · g = −4πGρ",
+    description:
+      "质量没有发出命令，只是改变了周围的几何。把指针缓慢移过天体，观察轨道如何重新选择方向。",
   },
   {
-    id: "riemann",
-    index: "02",
-    title: "黎曼猜想",
-    subtitle: "素数星空与临界线",
-    domain: "解析数论",
-    image: "/assets/riemann.png",
+    id: "fourier",
+    index: "A–02",
+    title: "频率的潮汐",
+    eyebrow: "FOURIER FIELD",
+    glyph: "∿",
+    position: [-1.28, -1.35, 1.25],
+    formula: "f̂(ξ) = ∫ f(x)e⁻²πⁱˣξ dx",
+    description:
+      "一段复杂的潮汐，可以拆成许多简单的波。轨道上的亮点正以不同频率穿过同一片夜色。",
+  },
+  {
+    id: "kakeya",
+    index: "B–07",
+    title: "方向的容器",
+    eyebrow: "KAKEYA GEOMETRY",
+    glyph: "△",
+    position: [2.65, 0.78, 0.35],
+    formula: "dimₕ K = dimₘ K = 3",
+    description:
+      "一个集合可以几乎没有体积，却容纳所有方向。拖动视线，寻找那些在深度里交叠的细线。",
   },
   {
     id: "godel",
-    index: "03",
-    title: "哥德尔不完备定理",
-    subtitle: "无法完成的逻辑手稿",
-    domain: "数理逻辑",
-    image: "/assets/godel.png",
-  },
-  {
-    id: "mandelbrot",
-    index: "04",
-    title: "曼德博集合",
-    subtitle: "无限递归的暮蓝海岸",
-    domain: "复动力系统",
-    image: "/assets/mandelbrot.png",
-  },
-  {
-    id: "poincare",
-    index: "05",
-    title: "庞加莱猜想",
-    subtitle: "流动收缩的三维宇宙",
-    domain: "几何拓扑",
-    image: "/assets/poincare.png",
-  },
-  {
-    id: "pnp",
-    index: "06",
-    title: "P 与 NP",
-    subtitle: "可验证却难以找到出口",
-    domain: "计算复杂性",
-    image: "/assets/p-vs-np.png",
+    index: "C–00",
+    title: "未完的证明",
+    eyebrow: "INCOMPLETE LOGIC",
+    glyph: "⌁",
+    position: [0.65, -1.86, 1.65],
+    formula: "G ↔ ¬Prov(⌜G⌝)",
+    description:
+      "任何足够丰富的形式系统，都留有无法在自身内部抵达的句子。这里的最后一条轨道不会闭合。",
   },
 ];
 
-const steps = [
-  {
-    number: "01",
-    label: "看见问题",
-    kicker: "一支无限细的针",
-    title: "每个方向，都要有一条单位线段",
-    body: "设 K 是三维空间中的一个集合。无论给出哪个方向 ω，都能在 K 中找到一条沿该方向放置的单位线段。线段可以移动、交叠，也可以聚集在异常复杂的区域里。",
-    math: String.raw`\forall\,\omega\in S^2,\quad \exists\,\ell_\omega\subset K,\ |\ell_\omega|=1`,
-    note: "拖动画面观察：这些线段并非整齐穿过同一个中心。",
-  },
-  {
-    number: "02",
-    label: "方向球面",
-    kicker: "从平面走向空间",
-    title: "方向不再是一圈，而是整个球面",
-    body: "在三维中，一个方向由球面 S² 上的点表示。Kakeya 集必须同时容纳球面上连续无穷多个方向，因此真正的难点来自方向之间复杂的空间相交。",
-    math: String.raw`\omega\in S^2`,
-    note: "打开“方向层”，观察球面上的方向采样。",
-  },
-  {
-    number: "03",
-    label: "缩小尺度",
-    kicker: "用 δ-线管观察细线",
-    title: "越靠近零，结构越像一团重叠的针雾",
-    body: "证明中常把无限细线段稍微加粗成半径为 δ 的线管，再研究 δ 不断趋近于零时，它们的并集怎样占据空间。滑动 δ，查看同一方向系统在不同尺度下的形态。",
-    math: String.raw`T_\delta(\ell)=\{x:\operatorname{dist}(x,\ell)\leq\delta\}`,
-    note: "δ-线管只是尺度邻域，不是有实体厚度的管道。",
-  },
-  {
-    number: "04",
-    label: "抵达结论",
-    kicker: "王虹 × Joshua Zahl · 2025",
-    title: "它可以零体积，却不能少一个维度",
-    body: "王虹与 Joshua Zahl 证明：三维 Kakeya 集的 Hausdorff 维数与 Minkowski 维数都必须等于 3。这里的“满维”不等于“必有正体积”。",
-    math: String.raw`\dim_{\mathrm H}K=\dim_{\mathrm M}K=3`,
-    note: "这是概念性视觉解释，不是完整证明图。",
-  },
+const MODES = [
+  { id: "observe", label: "观测" },
+  { id: "drift", label: "漂移" },
+  { id: "trace", label: "描轨" },
 ];
-
-function MathText({ children, block = false }) {
-  const html = useMemo(
-    () =>
-      katex.renderToString(children, {
-        throwOnError: false,
-        displayMode: block,
-      }),
-    [children, block],
-  );
-
-  return <span dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 function seededRandom(seed) {
   let value = seed % 2147483647;
@@ -133,527 +69,609 @@ function seededRandom(seed) {
   };
 }
 
-function TubeCloud({ delta, step, playing }) {
-  const group = useRef();
-  const mesh = useRef();
-  const directionPoints = useRef();
-  const count = 210;
-
-  const instances = useMemo(() => {
-    const random = seededRandom(1138);
-    const yAxis = new THREE.Vector3(0, 1, 0);
-    const matrix = new THREE.Matrix4();
-    const quaternion = new THREE.Quaternion();
-    const position = new THREE.Vector3();
-    const scale = new THREE.Vector3();
-    const color = new THREE.Color();
-    const values = [];
-
-    for (let i = 0; i < count; i += 1) {
-      const t = (i + 0.5) / count;
-      const y = 1 - 2 * t;
-      const radius = Math.sqrt(Math.max(0, 1 - y * y));
-      const phi = i * Math.PI * (3 - Math.sqrt(5));
-      const direction = new THREE.Vector3(
-        Math.cos(phi) * radius,
-        y,
-        Math.sin(phi) * radius,
-      ).normalize();
-
-      const tangent = new THREE.Vector3(-direction.z, 0.35, direction.x).normalize();
-      const bitangent = new THREE.Vector3().crossVectors(direction, tangent).normalize();
-      position
-        .copy(tangent)
-        .multiplyScalar((random() - 0.5) * 1.2)
-        .addScaledVector(bitangent, (random() - 0.5) * 1.2)
-        .addScaledVector(direction, (random() - 0.5) * 0.18);
-
-      quaternion.setFromUnitVectors(yAxis, direction);
-      scale.set(delta / 0.034, 0.84 + random() * 0.24, delta / 0.034);
-      matrix.compose(position, quaternion, scale);
-      color.set(i % 11 === 0 ? "#d9aa91" : i % 5 === 0 ? "#9ab9dd" : "#779bc5");
-      values.push({ matrix: matrix.clone(), color: color.clone() });
-    }
-    return values;
-  }, [delta]);
-
-  useEffect(() => {
-    if (!mesh.current) return;
-    instances.forEach(({ matrix, color }, index) => {
-      mesh.current.setMatrixAt(index, matrix);
-      mesh.current.setColorAt(index, color);
-    });
-    mesh.current.instanceMatrix.needsUpdate = true;
-    if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
-  }, [instances]);
-
-  const spherePoints = useMemo(() => {
-    const positions = [];
-    for (let i = 0; i < 220; i += 1) {
-      const t = (i + 0.5) / 220;
-      const y = 1 - 2 * t;
-      const radius = Math.sqrt(Math.max(0, 1 - y * y));
-      const phi = i * Math.PI * (3 - Math.sqrt(5));
-      positions.push(
-        Math.cos(phi) * radius * 1.82,
-        y * 1.82,
-        Math.sin(phi) * radius * 1.82,
-      );
-    }
-    return new Float32Array(positions);
+function StarField({ paused, mode }) {
+  const nearRef = useRef();
+  const farRef = useRef();
+  const fields = useMemo(() => {
+    const random = seededRandom(7741);
+    const makeField = (count, radius, depth) => {
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i += 1) {
+        const angle = random() * Math.PI * 2;
+        const r = Math.pow(random(), 0.62) * radius;
+        positions[i * 3] = Math.cos(angle) * r;
+        positions[i * 3 + 1] = Math.sin(angle) * r * 0.58;
+        positions[i * 3 + 2] = (random() - 0.5) * depth;
+      }
+      return positions;
+    };
+    return {
+      far: makeField(1600, 11, 8),
+      near: makeField(620, 8, 5),
+    };
   }, []);
 
-  const linePositions = useMemo(() => {
-    const positions = [];
-    const start = new THREE.Vector3();
-    const end = new THREE.Vector3();
-    instances.forEach(({ matrix }) => {
-      start.set(0, -1.11, 0).applyMatrix4(matrix);
-      end.set(0, 1.11, 0).applyMatrix4(matrix);
-      positions.push(start.x, start.y, start.z, end.x, end.y, end.z);
-    });
-    return new Float32Array(positions);
-  }, [instances]);
+  useFrame((state, delta) => {
+    if (!paused) {
+      farRef.current.rotation.z += delta * (mode === "drift" ? 0.009 : 0.003);
+      nearRef.current.rotation.z -= delta * (mode === "drift" ? 0.018 : 0.006);
+    }
+    nearRef.current.position.x = THREE.MathUtils.lerp(
+      nearRef.current.position.x,
+      state.pointer.x * 0.18,
+      0.025,
+    );
+    nearRef.current.position.y = THREE.MathUtils.lerp(
+      nearRef.current.position.y,
+      state.pointer.y * 0.12,
+      0.025,
+    );
+  });
 
-  useFrame((_, frameDelta) => {
-    if (playing && group.current) group.current.rotation.y += frameDelta * 0.08;
-    if (directionPoints.current) {
-      directionPoints.current.rotation.y -= frameDelta * 0.035;
+  return (
+    <>
+      <points ref={farRef} position={[0, 0, -4]}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[fields.far, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#a9bbca"
+          size={0.012}
+          transparent
+          opacity={0.48}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+      <points ref={nearRef} position={[0, 0, -1]}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[fields.near, 3]} />
+        </bufferGeometry>
+        <pointsMaterial
+          color="#ead9af"
+          size={0.018}
+          transparent
+          opacity={0.72}
+          sizeAttenuation
+          depthWrite={false}
+        />
+      </points>
+    </>
+  );
+}
+
+function NocturnePlanet({ active, pulse, paused }) {
+  const group = useRef();
+  const planet = useRef();
+  const atmosphere = useRef();
+  const pulseRing = useRef();
+  const { pointer } = useThree();
+
+  const planetMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uLight: { value: new THREE.Vector3(1.8, 0.45, 3.5) },
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform float uTime;
+          uniform vec3 uLight;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          float hash(vec3 p) {
+            p = fract(p * 0.3183099 + .1);
+            p *= 17.0;
+            return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+          }
+          void main() {
+            vec3 n = normalize(vNormal);
+            float light = max(dot(n, normalize(uLight)), 0.0);
+            float edge = pow(1.0 - max(dot(n, vec3(0.0, 0.0, 1.0)), 0.0), 2.5);
+            float grain = hash(floor(vPosition * 92.0 + uTime * 0.12));
+            float bands = sin(vPosition.y * 18.0 + sin(vPosition.x * 7.0)) * 0.5 + 0.5;
+            vec3 deep = vec3(0.018, 0.055, 0.105);
+            vec3 blue = vec3(0.055, 0.145, 0.24);
+            vec3 gold = vec3(0.84, 0.73, 0.51);
+            vec3 color = mix(deep, blue, light * 0.48 + bands * 0.035);
+            color += gold * edge * (0.42 + light * 0.45);
+            color += (grain - 0.5) * 0.035;
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `,
+      }),
+    [],
+  );
+
+  const atmosphereMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          void main() {
+            float fresnel = pow(0.69 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 4.0);
+            gl_FragColor = vec4(0.58, 0.70, 0.73, fresnel * 0.9);
+          }
+        `,
+      }),
+    [],
+  );
+
+  useFrame((_, delta) => {
+    const speed = paused ? 0 : delta;
+    planetMaterial.uniforms.uTime.value += speed;
+    if (!paused) planet.current.rotation.y += delta * 0.018;
+    const selected = OBSERVATIONS.find((item) => item.id === active);
+    const targetX = selected ? -selected.position[1] * 0.045 : pointer.y * 0.08;
+    const targetY = selected ? selected.position[0] * 0.035 : pointer.x * 0.11;
+    group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, targetX, 0.035);
+    group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, targetY, 0.035);
+    atmosphere.current.rotation.z -= speed * 0.008;
+    if (pulseRing.current) {
+      const age = Math.min((performance.now() - pulse) / 1700, 1);
+      pulseRing.current.scale.setScalar(1 + age * 2.1);
+      pulseRing.current.material.opacity = Math.max(0, 0.42 * (1 - age));
     }
   });
 
   return (
-    <group ref={group} rotation={[0.17, 0.25, -0.08]}>
-      <instancedMesh ref={mesh} args={[null, null, count]}>
-        <cylinderGeometry args={[0.029, 0.029, 2.22, 6, 1, true]} />
+    <group ref={group} position={[-0.25, 0.18, -0.45]}>
+      <mesh ref={planet} material={planetMaterial}>
+        <sphereGeometry args={[2.72, 96, 72]} />
+      </mesh>
+      <mesh ref={atmosphere} scale={1.045} material={atmosphereMaterial}>
+        <sphereGeometry args={[2.72, 72, 48]} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2.2, 0.18, -0.06]} scale={[1, 0.96, 1]}>
+        <torusGeometry args={[2.78, 0.012, 8, 180]} />
         <meshBasicMaterial
+          color="#e7d7b7"
           transparent
-          opacity={step === 2 ? 0.44 : step === 3 ? 0.78 : 0.68}
-          vertexColors
+          opacity={0.24}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <mesh ref={pulseRing} key={pulse}>
+        <ringGeometry args={[2.76, 2.79, 180]} />
+        <meshBasicMaterial
+          color="#efd08b"
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
-          dithering
         />
-      </instancedMesh>
-
-      <lineSegments>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
-        </bufferGeometry>
-        <lineBasicMaterial
-          color="#a8bfd5"
-          transparent
-          opacity={step === 2 ? 0.24 : 0.18}
-          blending={THREE.AdditiveBlending}
-        />
-      </lineSegments>
-
-      <points ref={directionPoints} visible={step === 1 || step === 3}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[spherePoints, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          color="#e8d7b7"
-          size={0.018}
-          transparent
-          opacity={step === 1 ? 0.52 : 0.16}
-          sizeAttenuation
-        />
-      </points>
-
-      {step === 2 && (
-        <>
-          {[1.28, 1.55, 1.83].map((size, index) => (
-            <mesh key={size} scale={size}>
-              <sphereGeometry args={[1, 24, 16]} />
-              <meshBasicMaterial
-                color={index === 1 ? "#b06a69" : "#6d89a9"}
-                wireframe
-                transparent
-                opacity={0.09}
-              />
-            </mesh>
-          ))}
-        </>
-      )}
-
-      <mesh>
-        <sphereGeometry args={[0.043, 16, 12]} />
-        <meshBasicMaterial color="#e7c982" />
       </mesh>
     </group>
   );
 }
 
-function KakeyaScene({ delta = 0.034, step = 0, playing = true, compact = false }) {
+function OrbitParticle({ curve, speed, offset, paused, color, emphasized }) {
+  const ref = useRef();
+  const progress = useRef(offset);
+  useFrame((_, delta) => {
+    if (!paused) progress.current = (progress.current + delta * speed) % 1;
+    ref.current.position.copy(curve.getPointAt(progress.current));
+  });
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[emphasized ? 0.028 : 0.016, 10, 10]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={emphasized ? 0.96 : 0.55}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
+function OrbitNetwork({ active, mode, paused }) {
+  const group = useRef();
+  const flare = useRef();
+  const orbitData = useMemo(() => {
+    const random = seededRandom(20260729);
+    const origin = new THREE.Vector3(1.72, -0.35, 1.25);
+    return Array.from({ length: 18 }, (_, index) => {
+      const angle = (index / 18) * Math.PI * 2 + random() * 0.45;
+      const radius = 2.6 + random() * 3.7;
+      const end = new THREE.Vector3(
+        Math.cos(angle) * radius - 0.4,
+        Math.sin(angle) * radius * 0.55,
+        -1.2 + random() * 2.3,
+      );
+      const controlA = origin
+        .clone()
+        .lerp(end, 0.28)
+        .add(new THREE.Vector3((random() - 0.5) * 1.8, (random() - 0.5) * 1.6, 0.6 + random() * 1.3));
+      const controlB = origin
+        .clone()
+        .lerp(end, 0.72)
+        .add(new THREE.Vector3((random() - 0.5) * 2.2, (random() - 0.5) * 1.5, (random() - 0.5) * 1.7));
+      const curve = new THREE.CatmullRomCurve3([origin, controlA, controlB, end]);
+      return {
+        curve,
+        points: curve.getPoints(100),
+        speed: 0.025 + random() * 0.075,
+        offset: random(),
+        tone: index % 6 === 0 ? "#e1a17d" : "#e6d8b9",
+      };
+    });
+  }, []);
+
+  useFrame((state, delta) => {
+    if (!paused) group.current.rotation.z += delta * (mode === "drift" ? 0.01 : 0.002);
+    flare.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 3.2) * 0.14);
+  });
+
+  return (
+    <group ref={group}>
+      {orbitData.map((orbit, index) => (
+        <group key={index}>
+          <Line
+            points={orbit.points}
+            color={orbit.tone}
+            lineWidth={mode === "trace" && index % 2 === 0 ? 1.2 : 0.65}
+            dashed
+            dashSize={index % 3 === 0 ? 0.07 : 0.025}
+            gapSize={index % 3 === 0 ? 0.09 : 0.055}
+            transparent
+            opacity={
+              mode === "trace"
+                ? index % 2 === 0
+                  ? 0.58
+                  : 0.25
+                : active
+                  ? 0.2
+                  : 0.32
+            }
+            depthWrite={false}
+          />
+          <OrbitParticle
+            curve={orbit.curve}
+            speed={orbit.speed}
+            offset={orbit.offset}
+            paused={paused}
+            color={orbit.tone}
+            emphasized={mode === "trace" || index % 4 === 0}
+          />
+        </group>
+      ))}
+      <group ref={flare} position={[1.72, -0.35, 1.25]}>
+        <mesh>
+          <sphereGeometry args={[0.11, 24, 24]} />
+          <meshBasicMaterial color="#fff0ba" />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[0.28, 24, 24]} />
+          <meshBasicMaterial
+            color="#f3bd68"
+            transparent
+            opacity={0.25}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+        <pointLight color="#e9a75c" intensity={6} distance={5.4} decay={2} />
+      </group>
+    </group>
+  );
+}
+
+function SceneNode({ observation, active, setActive }) {
+  const mesh = useRef();
+  const [hovered, setHovered] = useState(false);
+  useFrame((state) => {
+    const scale =
+      1 +
+      Math.sin(state.clock.elapsedTime * 2.1 + observation.position[0]) * 0.06 +
+      (active ? 0.22 : hovered ? 0.1 : 0);
+    mesh.current.scale.setScalar(scale);
+  });
+  return (
+    <Float speed={1.3} rotationIntensity={0.12} floatIntensity={0.08}>
+      <group position={observation.position}>
+        <mesh
+          ref={mesh}
+          onClick={(event) => {
+            event.stopPropagation();
+            setActive(observation.id);
+          }}
+          onPointerEnter={(event) => {
+            event.stopPropagation();
+            setHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerLeave={() => {
+            setHovered(false);
+            document.body.style.cursor = "";
+          }}
+        >
+          <octahedronGeometry args={[0.075, 0]} />
+          <meshBasicMaterial color={active ? "#ffca7a" : "#d9c9a8"} />
+        </mesh>
+        <mesh scale={active ? 1.5 : 1}>
+          <ringGeometry args={[0.13, 0.145, 32]} />
+          <meshBasicMaterial
+            color={active ? "#e7a575" : "#b9b09c"}
+            transparent
+            opacity={active ? 0.9 : 0.42}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        <Html center distanceFactor={9} className="scene-node-label">
+          <button
+            type="button"
+            className={active ? "is-active" : ""}
+            onClick={() => setActive(observation.id)}
+            aria-label={`打开${observation.title}`}
+          >
+            <small>{observation.index}</small>
+            <span>{observation.title}</span>
+          </button>
+        </Html>
+      </group>
+    </Float>
+  );
+}
+
+function CameraRig({ active, mode }) {
+  const { camera, pointer } = useThree();
+  useFrame(() => {
+    const observation = OBSERVATIONS.find((item) => item.id === active);
+    const modeDepth = mode === "drift" ? 0.55 : mode === "trace" ? -0.25 : 0;
+    const targetX = observation ? observation.position[0] * 0.07 : pointer.x * 0.22;
+    const targetY = observation ? observation.position[1] * 0.06 : pointer.y * 0.16;
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, 0.022);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.022);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, 7.8 + modeDepth, 0.025);
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
+function Horizon() {
+  const shape = useMemo(() => {
+    const random = seededRandom(402);
+    const result = new THREE.Shape();
+    result.moveTo(-9, -4.5);
+    for (let i = 0; i <= 80; i += 1) {
+      const x = -9 + (i / 80) * 18;
+      const y =
+        -3.14 +
+        Math.sin(i * 0.19) * 0.11 +
+        Math.sin(i * 0.047) * 0.18 +
+        random() * 0.07;
+      result.lineTo(x, y);
+    }
+    result.lineTo(9, -4.5);
+    result.closePath();
+    return result;
+  }, []);
+  return (
+    <mesh>
+      <shapeGeometry args={[shape]} />
+      <meshBasicMaterial color="#050f1e" transparent opacity={0.88} />
+    </mesh>
+  );
+}
+
+function NocturneScene({ active, setActive, paused, mode, pulse }) {
   return (
     <Canvas
-      dpr={[1, 1.65]}
-      camera={{ position: [0.25, 0.1, compact ? 5.9 : 5.2], fov: compact ? 35 : 38 }}
-      gl={{ antialias: true, alpha: true }}
+      dpr={[1, 1.7]}
+      camera={{ position: [0, 0, 7.8], fov: 48, near: 0.1, far: 100 }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      onPointerMissed={() => setActive(null)}
     >
-      <color attach="background" args={["#101d32"]} />
-      <fog attach="fog" args={["#101d32", 4.8, 9]} />
-      <ambientLight intensity={1.3} />
+      <color attach="background" args={["#071426"]} />
+      <fog attach="fog" args={["#071426", 7, 16]} />
       <Suspense fallback={null}>
-        <TubeCloud delta={delta} step={step} playing={playing} />
+        <CameraRig active={active} mode={mode} />
+        <StarField paused={paused} mode={mode} />
+        <NocturnePlanet active={active} pulse={pulse} paused={paused} />
+        <OrbitNetwork active={active} mode={mode} paused={paused} />
+        {OBSERVATIONS.map((observation) => (
+          <SceneNode
+            key={observation.id}
+            observation={observation}
+            active={active === observation.id}
+            setActive={setActive}
+          />
+        ))}
+        <Horizon />
       </Suspense>
-      <OrbitControls
-        makeDefault
-        enablePan={false}
-        enableZoom={!compact}
-        minDistance={3.8}
-        maxDistance={7.4}
-        autoRotate={playing && compact}
-        autoRotateSpeed={0.34}
-      />
     </Canvas>
   );
 }
 
-function Header({ view, onHome, onExplore }) {
-  return (
-    <header className="site-header">
-      <button className="brand" onClick={onHome} aria-label="返回理境首页">
-        <span className="brand-mark">理</span>
-        <span className="brand-copy">
-          <strong>理境</strong>
-          <small>LIJING · MATHEMATICAL REALMS</small>
-        </span>
-      </button>
+export function App() {
+  const [active, setActive] = useState(null);
+  const [mode, setMode] = useState("observe");
+  const [paused, setPaused] = useState(false);
+  const [pulse, setPulse] = useState(0);
+  const [entered, setEntered] = useState(false);
+  const [time, setTime] = useState("00:00:00");
+  const activeObservation = OBSERVATIONS.find((item) => item.id === active);
 
-      <nav aria-label="主导航">
-        <button className={view === "home" ? "is-active" : ""} onClick={onHome}>
-          入口
+  useEffect(() => {
+    const updateTime = () =>
+      setTime(
+        new Intl.DateTimeFormat("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).format(new Date()),
+      );
+    updateTime();
+    const timer = window.setInterval(updateTime, 1000);
+    const entryTimer = window.setTimeout(() => setEntered(true), 500);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(entryTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const keyHandler = (event) => {
+      if (event.key === "Escape") setActive(null);
+      if (event.key.toLowerCase() === "p") setPaused((value) => !value);
+      if (["1", "2", "3"].includes(event.key)) {
+        setMode(MODES[Number(event.key) - 1].id);
+      }
+    };
+    window.addEventListener("keydown", keyHandler);
+    return () => window.removeEventListener("keydown", keyHandler);
+  }, []);
+
+  const triggerPulse = () => {
+    setPulse(performance.now());
+    setActive(null);
+  };
+
+  return (
+    <main className={`observatory ${entered ? "is-entered" : ""}`}>
+      <div className="scene-wrap">
+        <NocturneScene
+          active={active}
+          setActive={setActive}
+          paused={paused}
+          mode={mode}
+          pulse={pulse}
+        />
+      </div>
+      <div className="paper-grain" aria-hidden="true" />
+      <div className="vignette" aria-hidden="true" />
+
+      <header className="observatory-header">
+        <button className="brand-lockup" type="button" onClick={triggerPulse}>
+          <span className="brand-seal">暮</span>
+          <span>
+            <strong>暮蓝自然研究所</strong>
+            <small>NOCTURNE FIELD OBSERVATORY</small>
+          </span>
         </button>
+        <div className="header-coordinates" aria-label="观测坐标">
+          <span>31°13′N</span><i /><span>121°28′E</span><i /><span>{time}</span>
+        </div>
         <button
-          className={view === "explore" ? "is-active" : ""}
-          onClick={() => onExplore("kakeya")}
+          className="motion-toggle"
+          type="button"
+          onClick={() => setPaused((value) => !value)}
+          aria-pressed={paused}
         >
-          探索
+          {paused ? <Play size={15} /> : <Pause size={15} />}
+          <span>{paused ? "继续流动" : "冻结星图"}</span>
         </button>
-        <a href="#atlas">星图</a>
-        <a href="#about">关于</a>
+      </header>
+
+      <section className="hero-copy" aria-labelledby="hero-title">
+        <p className="hero-kicker">
+          <span>FIELD NOTE Nº 0729</span>
+          <span>夜间观测中</span>
+        </p>
+        <h1 id="hero-title">
+          万物沿着<br />
+          <em>尚未写完的轨道</em><br />
+          彼此抵达
+        </h1>
+        <p className="hero-deck">
+          一张可以触摸的宇宙手稿。移动指针扰动引力场，
+          点击微光，展开那些藏在夜色里的公式。
+        </p>
+      </section>
+
+      <nav className="mode-rail" aria-label="观测模式">
+        <span className="rail-line" />
+        {MODES.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            className={mode === item.id ? "is-active" : ""}
+            onClick={() => setMode(item.id)}
+            aria-pressed={mode === item.id}
+          >
+            <small>0{index + 1}</small>
+            <span>{item.label}</span>
+          </button>
+        ))}
       </nav>
 
-      <button className="header-action" onClick={() => onExplore("kakeya")}>
-        进入手稿 <ArrowRight size={15} weight="light" />
+      <button
+        className="singularity-control"
+        type="button"
+        onClick={triggerPulse}
+        aria-label="触发星核脉冲"
+      >
+        <Crosshair size={18} />
+        <span>触发星核</span>
+        <small>PULSE FIELD</small>
       </button>
-    </header>
-  );
-}
 
-function Home({ onExplore, onOpenPlate }) {
-  return (
-    <>
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span>第一卷 · 几何测度论</span>
-            <span>2025 / R³</span>
-          </div>
-          <h1 id="hero-title">
-            <span>在几乎无体积的空间里，</span>
-            <em>藏下所有方向。</em>
-          </h1>
-          <p className="hero-lead">
-            三维 Kakeya 集猜想，由王虹与 Joshua Zahl 解决。
-            一束无限细的线，可以被压缩得近乎消失，却不能失去完整的三维性。
-          </p>
-          <div className="hero-actions">
-            <button className="primary-action" onClick={() => onExplore("kakeya")}>
-              进入三维 Kakeya
-              <ArrowRight size={18} weight="light" />
+      <aside className={`observation-card ${activeObservation ? "is-open" : ""}`}>
+        {activeObservation && (
+          <>
+            <button className="card-close" type="button" onClick={() => setActive(null)} aria-label="关闭手稿">
+              <X size={16} />
             </button>
-            <button className="text-action" onClick={onOpenPlate}>
-              <BookOpenText size={18} weight="light" />
-              查看研究手稿
-            </button>
-          </div>
-          <div className="hero-proof">
-            <span className="proof-line" />
-            <MathText>{String.raw`\dim_{\mathrm H}K=\dim_{\mathrm M}K=3`}</MathText>
-            <small>满维不意味着正体积</small>
-          </div>
-        </div>
-
-        <div className="hero-stage">
-          <div className="stage-meta">
-            <span>拖动 · 旋转空间</span>
-            <span>δ = 0.034</span>
-          </div>
-          <KakeyaScene compact />
-          <div className="stage-caption">
-            <span>全方向线管场</span>
-            <Compass size={18} weight="light" />
-          </div>
-          <div className="stage-annotation stage-annotation-a">ω ∈ S²</div>
-          <div className="stage-annotation stage-annotation-b">K ⊂ ℝ³</div>
-        </div>
-
-        <a className="scroll-cue" href="#atlas">
-          向下探索 <ArrowDown size={16} weight="light" />
-        </a>
-      </section>
-
-      <section className="atlas" id="atlas" aria-labelledby="atlas-title">
-        <div className="section-heading">
-          <div>
-            <span className="section-index">FIELD NOTES / 01—11</span>
-            <h2 id="atlas-title">数学观念星图</h2>
-          </div>
-          <p>
-            每一个理论，都是一处可以进入的世界。
-            <br />
-            十一册研究手稿现已开放。
-          </p>
-        </div>
-
-        <div className="concept-grid">
-          {theoryConcepts.map((concept) => (
-            <article
-              className="concept-card is-available"
-              key={concept.id}
-            >
-              <button
-                onClick={() => onExplore(concept.id)}
-                aria-label={`${concept.title}，进入探索`}
-              >
-                <img src={concept.image} alt="" />
-                <span className="concept-shade" />
-                <span className="concept-number">{concept.index}</span>
-                <span className="concept-status">开放探索</span>
-                <span className="concept-copy">
-                  <small>{concept.domain}</small>
-                  <strong>{concept.title}</strong>
-                  <span>{concept.subtitle}</span>
-                </span>
-                <span className="concept-arrow">
-                  <ArrowRight size={18} weight="light" />
-                </span>
-              </button>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="manifesto" id="about">
-        <span className="section-index">ABOUT LIJING</span>
-        <p>
-          理境不是题库。
-          <br />
-          它是一座以图像、空间和交互解释深奥数学观念的数字博物馆。
-        </p>
-        <div className="manifesto-meta">
-          <span>看见直觉</span>
-          <span>玩懂机制</span>
-          <span>读懂定义</span>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function Explorer({ theoryId, onBack, onOpenPlate }) {
-  const theory = theories[theoryId] ?? theories.kakeya;
-  const theorySteps = theory.steps;
-  const [activeStep, setActiveStep] = useState(0);
-  const [parameter, setParameter] = useState(theory.control.initial);
-  const [playing, setPlaying] = useState(true);
-  const step = theorySteps[activeStep];
-
-  return (
-    <main className="explorer">
-      <aside className="explorer-rail">
-        <button className="back-button" onClick={onBack}>
-          <ArrowLeft size={17} weight="light" />
-          返回入口
-        </button>
-        <div className="rail-title">
-          <small>手稿 {theory.index}</small>
-          <strong>{theory.title}</strong>
-        </div>
-        <ol>
-          {theorySteps.map((item, index) => (
-            <li key={item.number}>
-              <button
-                className={index === activeStep ? "is-active" : ""}
-                onClick={() => setActiveStep(index)}
-              >
-                <span>{item.number}</span>
-                {item.label}
-              </button>
-            </li>
-          ))}
-        </ol>
-        <button className="plate-link" onClick={onOpenPlate}>
-          <BookOpenText size={17} weight="light" />
-          原始研究页
-        </button>
-      </aside>
-
-      <section className="explorer-stage" aria-label={theory.stageAria}>
-        <div className="explorer-stage-head">
-          <span>{theory.stageLabel}</span>
-          <span>{theory.stageHint}</span>
-        </div>
-        {theoryId === "kakeya" ? (
-          <KakeyaScene delta={parameter} step={activeStep} playing={playing} />
-        ) : (
-          <TheoryScene
-            theoryId={theoryId}
-            parameter={parameter}
-            activeStep={activeStep}
-            playing={playing}
-          />
+            <p className="card-eyebrow">
+              <span>{activeObservation.index}</span>
+              {activeObservation.eyebrow}
+            </p>
+            <div className="card-glyph">{activeObservation.glyph}</div>
+            <h2>{activeObservation.title}</h2>
+            <p>{activeObservation.description}</p>
+            <div className="card-formula">{activeObservation.formula}</div>
+            <div className="card-meta">
+              <span>ARCHIVE / 2026</span>
+              <Compass size={15} />
+            </div>
+          </>
         )}
-        <div className="axis-label axis-x">x</div>
-        <div className="axis-label axis-y">y</div>
-        <div className="axis-label axis-z">z</div>
-        <div className="explorer-controls">
-          <button
-            className="round-control"
-            onClick={() => setPlaying((value) => !value)}
-            aria-label={playing ? "暂停旋转" : "继续旋转"}
-          >
-            {playing ? <Pause size={17} /> : <Play size={17} />}
-          </button>
-          <div className="delta-control">
-            <label htmlFor="theory-parameter">{theory.control.label}</label>
-            <input
-              id="theory-parameter"
-              type="range"
-              min={theory.control.min}
-              max={theory.control.max}
-              step={theory.control.step}
-              value={parameter}
-              onInput={(event) => setParameter(Number(event.currentTarget.value))}
-              onChange={(event) => setParameter(Number(event.target.value))}
-            />
-            <output>{parameter.toFixed(theory.control.digits)}</output>
-          </div>
-          <span className="control-hint">
-            <ArrowsOut size={16} weight="light" /> 自由观察
-          </span>
-        </div>
-      </section>
-
-      <aside className="explorer-notes">
-        <div className="note-counter">
-          <span>{step.number}</span>
-          <small>/ {String(theorySteps.length).padStart(2, "0")}</small>
-        </div>
-        <span className="note-kicker">{step.kicker}</span>
-        <h2>{step.title}</h2>
-        <p>{step.body}</p>
-        <div className="math-panel">
-          <MathText block>{step.math}</MathText>
-        </div>
-        <div className="field-note">
-          <span>{theory.observation}</span>
-          <p>{step.note}</p>
-        </div>
-        <div className="step-navigation">
-          <button
-            onClick={() => setActiveStep((value) => Math.max(0, value - 1))}
-            disabled={activeStep === 0}
-            aria-label="上一步"
-          >
-            <ArrowLeft size={18} weight="light" />
-          </button>
-          <span>
-            {activeStep + 1} / {theorySteps.length}
-          </span>
-          <button
-            onClick={() =>
-              setActiveStep((value) => Math.min(theorySteps.length - 1, value + 1))
-            }
-            disabled={activeStep === theorySteps.length - 1}
-            aria-label="下一步"
-          >
-            <ArrowRight size={18} weight="light" />
-          </button>
-        </div>
       </aside>
+
+      <footer className="observatory-footer">
+        <div className="interaction-hint">
+          <span className="pointer-orbit"><i /></span>
+          <p>
+            <strong>移动以扰动引力</strong>
+            <small>点击节点展开手稿 · P 暂停 · 1—3 切换模式</small>
+          </p>
+        </div>
+        <p className="field-state">
+          <span className="live-dot" />
+          FIELD STABLE
+          <b>φ 1.618</b>
+        </p>
+      </footer>
+
+      <div className="corner corner-tl" />
+      <div className="corner corner-tr" />
+      <div className="corner corner-bl" />
+      <div className="corner corner-br" />
     </main>
   );
 }
 
-function PlateModal({ theoryId, onClose }) {
-  const theory = theories[theoryId] ?? theories.kakeya;
-
-  useEffect(() => {
-    const closeOnEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${theory.title}研究手稿`}
-    >
-      <button className="modal-close" onClick={onClose} aria-label="关闭研究手稿">
-        <X size={22} weight="light" />
-      </button>
-      <figure className="plate-modal">
-        <img
-          src={theory.image}
-          alt={`${theory.title}暮蓝自然研究手稿`}
-        />
-        <figcaption>
-          <span>INFINITE MANUSCRIPT · PLATE {theory.index}</span>
-          <p>
-            {theory.domain} · {theory.subtitle}。
-            图中微小手写内容承担视觉笔记功能，详细概念以右侧章节文字与公式为准。
-          </p>
-        </figcaption>
-      </figure>
-    </div>
-  );
-}
-
-export function App() {
-  const [view, setView] = useState("home");
-  const [activeTheoryId, setActiveTheoryId] = useState("kakeya");
-  const [plateOpen, setPlateOpen] = useState(false);
-
-  const goHome = () => {
-    setView("home");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goExplore = (theoryId = "kakeya") => {
-    setActiveTheoryId(theoryId);
-    setView("explore");
-    window.scrollTo({ top: 0, behavior: "instant" });
-  };
-
-  return (
-    <div className="app-shell">
-      {view === "home" && (
-        <Header view={view} onHome={goHome} onExplore={goExplore} />
-      )}
-      {view === "home" ? (
-        <Home onExplore={goExplore} onOpenPlate={() => setPlateOpen(true)} />
-      ) : (
-        <Explorer
-          key={activeTheoryId}
-          theoryId={activeTheoryId}
-          onBack={goHome}
-          onOpenPlate={() => setPlateOpen(true)}
-        />
-      )}
-      {plateOpen && (
-        <PlateModal
-          theoryId={activeTheoryId}
-          onClose={() => setPlateOpen(false)}
-        />
-      )}
-    </div>
-  );
-}
+export default App;
