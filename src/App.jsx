@@ -302,40 +302,39 @@ function OrbitNetwork({ active, mode, paused, pulse }) {
   const group = useRef();
   const flare = useRef();
   const orbitData = useMemo(() => {
-    const random = seededRandom(20260729);
     const origin = new THREE.Vector3(1.72, -0.35, 1.25);
-    return Array.from({ length: 18 }, (_, index) => {
-      const angle = (index / 18) * Math.PI * 2 + random() * 0.45;
-      const radius = 2.6 + random() * 3.7;
-      const end = new THREE.Vector3(
-        Math.cos(angle) * radius - 0.4,
-        Math.sin(angle) * radius * 0.55,
-        -1.2 + random() * 2.3,
-      );
+    const arcOffsets = [
+      new THREE.Vector3(-0.35, 1.15, 1.2),
+      new THREE.Vector3(-0.75, -0.65, 1.05),
+      new THREE.Vector3(0.95, 0.75, 1.3),
+      new THREE.Vector3(0.35, -1.05, 1.15),
+    ];
+    const tones = ["#e6d8b9", "#d9cfba", "#e1a17d", "#c8d5d8"];
+
+    return OBSERVATIONS.map((observation, index) => {
+      const end = new THREE.Vector3(...observation.position);
+      const arcOffset = arcOffsets[index];
       const controlA = origin
         .clone()
-        .lerp(end, 0.28)
-        .add(new THREE.Vector3((random() - 0.5) * 1.8, (random() - 0.5) * 1.6, 0.6 + random() * 1.3));
+        .lerp(end, 0.3)
+        .add(arcOffset.clone().multiplyScalar(0.72));
       const controlB = origin
         .clone()
-        .lerp(end, 0.72)
-        .add(new THREE.Vector3((random() - 0.5) * 2.2, (random() - 0.5) * 1.5, (random() - 0.5) * 1.7));
+        .lerp(end, 0.7)
+        .add(arcOffset);
       const curve = new THREE.CatmullRomCurve3([origin, controlA, controlB, end]);
       return {
+        id: observation.id,
         curve,
-        points: curve.getPoints(100),
-        speed: 0.025 + random() * 0.075,
-        offset: random(),
-        tone: index % 6 === 0 ? "#e1a17d" : "#e6d8b9",
+        points: curve.getPoints(120),
+        speed: 0.045 + index * 0.012,
+        offset: index * 0.23,
+        tone: tones[index],
       };
     });
   }, []);
 
-  useFrame((state, delta) => {
-    if (!paused) {
-      group.current.rotation.z += delta * (mode === "drift" ? 0.12 : 0.015);
-      group.current.rotation.y += delta * (mode === "trace" ? 0.035 : 0.006);
-    }
+  useFrame((state) => {
     const age = Math.min(Math.max((performance.now() - pulse) / 1250, 0), 1);
     const blast = pulse > 0 && age < 1 ? Math.sin(age * Math.PI) : 0;
     flare.current.scale.setScalar(
@@ -348,37 +347,40 @@ function OrbitNetwork({ active, mode, paused, pulse }) {
 
   return (
     <group ref={group}>
-      {orbitData.map((orbit, index) => (
-        <group key={index}>
-          <Line
-            points={orbit.points}
-            color={orbit.tone}
-            lineWidth={mode === "trace" && index % 2 === 0 ? 1.2 : 0.65}
-            dashed
-            dashSize={index % 3 === 0 ? 0.07 : 0.025}
-            gapSize={index % 3 === 0 ? 0.09 : 0.055}
-            transparent
-            opacity={
-              mode === "trace"
-                ? index % 2 === 0
-                  ? 0.58
-                  : 0.25
-                : active
-                  ? 0.2
-                  : 0.32
-            }
-            depthWrite={false}
-          />
-          <OrbitParticle
-            curve={orbit.curve}
-            speed={orbit.speed}
-            offset={orbit.offset}
-            paused={paused}
-            color={orbit.tone}
-            emphasized={mode === "trace" || index % 4 === 0}
-          />
-        </group>
-      ))}
+      {orbitData.map((orbit) => {
+        const selected = active === orbit.id;
+        return (
+          <group key={orbit.id}>
+            <Line
+              points={orbit.points}
+              color={selected ? "#ffd48a" : orbit.tone}
+              lineWidth={selected ? 2.2 : mode === "trace" ? 1.15 : 0.75}
+              dashed
+              dashSize={selected ? 0.12 : 0.055}
+              gapSize={selected ? 0.045 : 0.075}
+              transparent
+              opacity={
+                selected
+                  ? 0.96
+                  : active
+                    ? 0.12
+                    : mode === "trace"
+                      ? 0.58
+                      : 0.34
+              }
+              depthWrite={false}
+            />
+            <OrbitParticle
+              curve={orbit.curve}
+              speed={orbit.speed * (selected ? 2.4 : 1)}
+              offset={orbit.offset}
+              paused={paused}
+              color={selected ? "#ffd48a" : orbit.tone}
+              emphasized={selected || mode === "trace"}
+            />
+          </group>
+        );
+      })}
       <group ref={flare} position={[1.72, -0.35, 1.25]}>
         <mesh>
           <sphereGeometry args={[0.11, 24, 24]} />
@@ -821,7 +823,7 @@ export function App() {
           <span className="pointer-orbit"><i /></span>
           <p>
             <strong>按住拖拽天体 · 滚轮穿越深度</strong>
-            <small>双击触发冲击 · P 暂停 · 1—3 切换模式</small>
+            <small>点击节点点亮主轨 · 双击触发冲击 · P 暂停</small>
           </p>
         </div>
         <p className="field-state">
